@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>POS Resto & KDS Tablet</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Optimasi Touchscreen Tablet */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea {
+      user-select: text;
+    }
+    /* Scrollbar halus */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    .animate-ready {
+      animation: pulse-subtle 1.8s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+  <!-- ==================== TOP NAVIGATION HEADER ==================== -->
+  <header class="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between shadow-md shrink-0 z-30">
+    <!-- Resto Brand & Table Selected indicator -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center font-black text-xl shadow-lg shadow-brand-600/30">
+        <i data-lucide="utensils" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-base tracking-wide text-white">Nusantara Bistro</span>
+          <span class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Kasir #1
+          </span>
+        </div>
+        <p id="headerCurrentTableText" class="text-xs text-brand-300 font-medium">Mode: Memilih Meja</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector Tabs (Kasir / Dapur / Siap Saji) -->
+    <nav class="flex items-center bg-slate-800/90 p-1 rounded-2xl border border-slate-700">
+      <button onclick="switchScreen('kasir')" id="nav-btn-kasir" class="nav-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-brand-600 text-white shadow-sm">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+        <span>Kasir & Order</span>
+      </button>
+      <button onclick="switchScreen('kds')" id="nav-btn-kds" class="nav-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all text-slate-300 hover:text-white relative">
+        <i data-lucide="chef-hat" class="w-4 h-4"></i>
+        <span>Dapur (KDS)</span>
+        <span id="badgeKdsCount" class="hidden absolute -top-1 -right-1 px-1.5 py-0.5 bg-rose-500 text-white text-[10px] font-black rounded-full shadow">0</span>
+      </button>
+      <button onclick="switchScreen('waiter')" id="nav-btn-waiter" class="nav-tab px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all text-slate-300 hover:text-white relative">
+        <i data-lucide="bell-ring" class="w-4 h-4"></i>
+        <span>Siap Saji</span>
+        <span id="badgeWaiterCount" class="hidden absolute -top-1 -right-1 px-1.5 py-0.5 bg-emerald-500 text-white text-[10px] font-black rounded-full shadow">0</span>
+      </button>
+    </nav>
+
+    <!-- Global Workflow Switcher (Makan Dulu vs Bayar Dulu) -->
+    <div class="hidden lg:flex items-center bg-slate-800/90 p-1 rounded-2xl border border-slate-700 text-xs">
+      <span class="text-[10px] text-slate-400 font-bold px-2 uppercase tracking-wide">Sistem Alur:</span>
+      <button onclick="setWorkflowMode('postpaid')" id="hdrWorkflowPostpaid" class="px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 bg-brand-600 text-white shadow-sm">
+        <i data-lucide="utensils" class="w-3.5 h-3.5"></i>
+        <span>Makan Dulu</span>
+      </button>
+      <button onclick="setWorkflowMode('prepaid')" id="hdrWorkflowPrepaid" class="px-2.5 py-1.5 rounded-xl font-semibold transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+        <i data-lucide="badge-dollar-sign" class="w-3.5 h-3.5"></i>
+        <span>Bayar Dulu</span>
+      </button>
+    </div>
+
+    <!-- Clock & Quick Stats -->
+    <div class="flex items-center gap-3">
+      <div class="text-right hidden sm:block">
+        <div id="liveClock" class="font-mono text-sm font-bold text-slate-200">12:00:00</div>
+        <div class="text-[11px] text-slate-400">Shift Pagi • Budi S.</div>
+      </div>
+      <!-- Tombol Audio Mute & Reset Demo Data -->
+      <button onclick="toggleAudioMute()" id="btnAudioToggle" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700" title="Suara / Audio Efek">
+        <i data-lucide="volume-2" class="w-4 h-4"></i>
+      </button>
+      <button onclick="resetDemoData()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700" title="Reset Data Simulasi Meja">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Reset Demo</span>
+      </button>
+      <button onclick="showQuickInfoModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700" title="Informasi Aplikasi">
+        <i data-lucide="info" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT CONTAINERS ==================== -->
+  <main class="flex-1 flex overflow-hidden relative">
+
+    <!-- ==================== SCREEN 1: KASIR & ORDER ==================== -->
+    <section id="screen-kasir" class="w-full h-full flex flex-col overflow-hidden">
+      
+      <!-- SUB-VIEW 1.A: FLOOR PLAN (PILIH MEJA) -->
+      <div id="view-floorplan" class="flex-1 p-4 md:p-6 overflow-y-auto flex flex-col">
+        <!-- Floor Header & Filters -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <i data-lucide="map-pin" class="w-6 h-6 text-brand-600"></i>
+              Denah Meja Restoran
+            </h1>
+            <p class="text-xs text-slate-500">Pilih meja kosong untuk input pesanan, gabung meja untuk grup besar, atau meja aktif untuk bayar.</p>
+          </div>
+
+          <!-- Action Gabung Meja & Filter Area -->
+          <div class="flex items-center gap-2">
+            <button onclick="openMergeTableModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-sm transition">
+              <i data-lucide="merge" class="w-4 h-4"></i>
+              <span>Gabung Meja</span>
+            </button>
+            <div class="flex items-center gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+              <button onclick="filterTableArea('all')" id="btn-area-all" class="area-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white">Semua</button>
+              <button onclick="filterTableArea('indoor')" id="btn-area-indoor" class="area-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Indoor</button>
+              <button onclick="filterTableArea('outdoor')" id="btn-area-outdoor" class="area-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Outdoor</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Indikator Legenda Status Meja -->
+        <div class="flex flex-wrap items-center gap-3 mb-4 p-2.5 bg-white rounded-2xl border border-slate-200 text-[11px] font-semibold text-slate-600">
+          <span class="text-slate-400 font-bold uppercase text-[10px]">Status:</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Kosong</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Memilih Menu</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Dimasak (Dapur)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-300"></span> Siap Saji 🔔</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Menunggu Bayar</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Meja Gabungan</span>
+        </div>
+
+        <!-- Table Grid Container (Tempat render kartu meja) -->
+        <div id="tableGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- SUB-VIEW 1.B: ORDER & KATALOG MENU (SPLIT VIEW TABLET) -->
+      <div id="view-order" class="hidden flex-1 flex flex-col md:flex-row overflow-hidden">
+        <!-- LEFT: KATALOG MENU (65%) -->
+        <div class="flex-1 flex flex-col overflow-hidden bg-slate-50 border-r border-slate-200">
+          <!-- Top Bar Catalog: Kembali ke Meja, Info Meja & Search -->
+          <div class="p-3 sm:p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2.5">
+              <button onclick="backToFloorPlan()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold flex items-center gap-1.5 transition active:scale-95">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span>Ganti Meja</span>
+              </button>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 id="currentTableBadge" class="font-black text-slate-900 text-sm sm:text-base">Meja 01</h2>
+                  <span id="currentTableAreaBadge" class="text-[10px] bg-brand-50 text-brand-700 font-bold px-2 py-0.5 rounded-full border border-brand-200">4 Kursi • INDOOR</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search input -->
+            <div class="relative w-full sm:w-64">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="menuSearchInput" oninput="filterMenuCatalog()" placeholder="Cari nama menu..." class="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+            </div>
+          </div>
+
+          <!-- Category Pills -->
+          <div class="px-4 py-2 bg-white/80 border-b border-slate-200 flex items-center gap-2 overflow-x-auto shrink-0">
+            <button onclick="selectCategory('all')" data-cat="all" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-brand-600 text-white shadow-sm shrink-0">Semua</button>
+            <button onclick="selectCategory('makanan')" data-cat="makanan" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0">Makanan Utama</button>
+            <button onclick="selectCategory('camilan')" data-cat="camilan" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0">Camilan</button>
+            <button onclick="selectCategory('kopi')" data-cat="kopi" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0">Kopi & Teh</button>
+            <button onclick="selectCategory('segar')" data-cat="segar" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0">Minuman Segar</button>
+            <button onclick="selectCategory('paket')" data-cat="paket" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0">Paket Komplit</button>
+          </div>
+
+          <!-- Menu Grid Container -->
+          <div class="flex-1 p-3 sm:p-4 overflow-y-auto">
+            <div id="menuCatalogGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: KERANJANG PESANAN / CART (35%) -->
+        <div class="w-full md:w-96 lg:w-[410px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col shrink-0">
+          <!-- Cart Header -->
+          <div class="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-brand-400">Keranjang Pesanan</span>
+              <h3 id="cartTableSummary" class="font-black text-sm text-white">Meja 01 • STATUS: MEMILIH</h3>
+            </div>
+            <button onclick="clearCurrentCart()" class="text-xs text-rose-300 hover:text-white flex items-center gap-1 font-semibold transition" title="Kosongkan Keranjang">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Bersihkan
+            </button>
+          </div>
+
+          <!-- Cart Items Scrollable List -->
+          <div id="cartItemsList" class="flex-1 p-4 overflow-y-auto divide-y divide-slate-100">
+            <!-- Rendered by JS -->
+          </div>
+
+          <!-- Cart Calculation & Checkout Buttons -->
+          <div class="p-4 bg-slate-50 border-t border-slate-200 shrink-0 space-y-3">
+            <!-- Mode Alur Transaksi per Pesanan (Switcher di dalam Cart) -->
+            <div class="p-2 bg-slate-200/70 rounded-2xl flex items-center justify-between text-xs">
+              <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <i data-lucide="repeat" class="w-3.5 h-3.5 text-brand-600"></i> Sistem Tempat Makan:
+              </span>
+              <div class="flex items-center gap-1 bg-white p-0.5 rounded-xl border border-slate-200 shadow-xs">
+                <button onclick="setWorkflowMode('postpaid')" id="cartModePostpaid" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition bg-brand-600 text-white">Makan Dulu</button>
+                <button onclick="setWorkflowMode('prepaid')" id="cartModePrepaid" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition text-slate-600 hover:text-slate-900">Bayar Dulu</button>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 text-xs">
+              <div class="flex justify-between text-slate-500 font-medium">
+                <span>Subtotal Menu:</span>
+                <span id="txtSubtotal" class="font-bold text-slate-800">Rp 0</span>
+              </div>
+              <div class="flex justify-between text-slate-500 font-medium">
+                <span>PB1 Restoran (10%):</span>
+                <span id="txtTax" class="font-bold text-slate-800">Rp 0</span>
+              </div>
+              <div class="flex justify-between items-center pt-2 border-t border-slate-200 font-black text-slate-900">
+                <span class="text-sm">Total Tagihan:</span>
+                <span id="txtGrandTotal" class="text-lg text-brand-600 font-black">Rp 0</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons: Dinamis menyesuaikan alur Makan Dulu vs Bayar Dulu -->
+            <div id="cartActionContainer" class="pt-1">
+              <!-- Rendered dynamically by renderCart() -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 2: DAPUR / KDS (KITCHEN DISPLAY SYSTEM) ==================== -->
+    <section id="screen-kds" class="hidden w-full h-full p-4 flex flex-col bg-slate-900 overflow-hidden">
+      <!-- KDS Bar -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+            <i data-lucide="flame" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-white font-black text-lg">Kitchen Display System (KDS)</h2>
+            <p class="text-xs text-slate-400">Monitor antrean pesanan masak koki secara langsung</p>
+          </div>
+        </div>
+
+        <!-- Filter Tiket Dapur -->
+        <div class="flex items-center gap-2 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+          <button onclick="filterKds('all')" id="kds-filter-all" class="px-3 py-1.5 rounded-lg font-bold bg-amber-500 text-slate-900">Semua Tiket</button>
+          <button onclick="filterKds('pending')" id="kds-filter-pending" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white">Menunggu</button>
+          <button onclick="filterKds('cooking')" id="kds-filter-cooking" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white">Sedang Masak</button>
+        </div>
+      </div>
+
+      <!-- KDS Tickets Container (Horizontally Scrollable Cards) -->
+      <div id="kdsTicketsGrid" class="flex-1 py-4 overflow-x-auto flex gap-4 items-start">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 3: WAITER / MAKANAN SIAP SAJI ==================== -->
+    <section id="screen-waiter" class="hidden w-full h-full p-4 md:p-6 flex flex-col bg-slate-50 overflow-y-auto">
+      <div class="max-w-5xl mx-auto w-full">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200 shadow-sm">
+              <i data-lucide="bell" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900">Monitor Antar Makanan (Ready to Serve)</h2>
+              <p class="text-xs text-slate-500">Daftar makanan yang sudah selesai dimasak di dapur dan siap diantar ke meja</p>
+            </div>
+          </div>
+          <span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-600 shadow-sm">
+            Waktu Pelayanan Efektif: &lt; 15 mnt
+          </span>
+        </div>
+
+        <!-- Ready Dishes Cards Grid -->
+        <div id="waiterReadyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== MODAL: VARIAN & CATATAN MENU ==================== -->
+  <div id="modifierModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col transform transition-all">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div id="modModalIcon" class="w-10 h-10 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-lg">
+            🍔
+          </div>
+          <div>
+            <h3 id="modModalTitle" class="font-extrabold text-slate-900 text-sm">Nama Menu</h3>
+            <p id="modModalPrice" class="text-xs font-bold text-brand-600">Rp 0</p>
+          </div>
+        </div>
+        <button onclick="closeModifierModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <!-- Opsi Varian Level Pedas / Es -->
+        <div id="modOptionGroup" class="space-y-2">
+          <label class="text-xs font-bold text-slate-700 block">Pilihan Varian / Tingkat Pedas</label>
+          <div id="modOptionButtons" class="grid grid-cols-3 gap-2">
+            <!-- Dynamic Variant Options -->
+          </div>
+        </div>
+
+        <!-- Catatan Khusus untuk Koki -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span>Catatan Khusus Koki</span>
+            <span class="text-[10px] text-slate-400 font-normal">Opsional</span>
+          </label>
+          <textarea id="modNotesInput" rows="2" placeholder="Contoh: Tanpa bawang goreng, kuah dipisah..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <!-- Jumlah Kuantitas -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+          <span class="text-xs font-bold text-slate-700">Jumlah Pesanan:</span>
+          <div class="flex items-center gap-3 bg-slate-100 p-1 rounded-xl">
+            <button onclick="adjustModQty(-1)" class="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200">-</button>
+            <span id="modQtyText" class="font-extrabold text-xs w-6 text-center">1</span>
+            <button onclick="adjustModQty(1)" class="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <button onclick="closeModifierModal()" class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100">Batal</button>
+        <button onclick="confirmAddToCart()" class="w-2/3 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i> Masukkan Pesanan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PEMBAYARAN MULTI-METODE ==================== -->
+  <div id="paymentModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <!-- Payment Header -->
+      <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <span class="text-xs text-brand-400 font-bold uppercase tracking-wider">Kasir Checkout</span>
+          <h3 class="font-extrabold text-base flex items-center gap-2">
+            Pembayaran Meja <span id="payModalTableNum" class="text-brand-300">#01</span>
+          </h3>
+        </div>
+        <button onclick="closePaymentModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- Total Tagihan Display -->
+        <div class="bg-amber-50 rounded-2xl p-3.5 border border-amber-200 text-center">
+          <p class="text-xs text-amber-700 font-medium">Total Yang Harus Dibayar</p>
+          <div id="payModalAmount" class="text-2xl font-black text-amber-900 tracking-tight">Rp 0</div>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div>
+          <label class="text-xs font-bold text-slate-700 block mb-2">Pilih Cara Pembayaran:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="selectPayMethod('cash')" id="payTab-cash" class="pay-method-tab py-2.5 px-2 rounded-xl text-xs font-bold border-2 border-brand-500 bg-brand-50 text-brand-700 flex flex-col items-center gap-1 transition">
+              <i data-lucide="banknote" class="w-4 h-4"></i> Tunai (Cash)
+            </button>
+            <button onclick="selectPayMethod('qris')" id="payTab-qris" class="pay-method-tab py-2.5 px-2 rounded-xl text-xs font-bold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 flex flex-col items-center gap-1 transition">
+              <i data-lucide="qr-code" class="w-4 h-4"></i> QRIS
+            </button>
+            <button onclick="selectPayMethod('edc')" id="payTab-edc" class="pay-method-tab py-2.5 px-2 rounded-xl text-xs font-bold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 flex flex-col items-center gap-1 transition">
+              <i data-lucide="credit-card" class="w-4 h-4"></i> Debit / EDC
+            </button>
+          </div>
+        </div>
+
+        <!-- SECTION A: CASH -->
+        <div id="payContent-cash" class="space-y-3">
+          <label class="text-xs font-bold text-slate-700 block">Pilihan Nominal Cepat:</label>
+          <div class="grid grid-cols-4 gap-2">
+            <button onclick="setCashAmount('pas')" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200">Uang Pas</button>
+            <button onclick="setCashAmount(50000)" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200">50.000</button>
+            <button onclick="setCashAmount(100000)" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200">100.000</button>
+            <button onclick="setCashAmount(200000)" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200">200.000</button>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs text-slate-500 font-medium">Uang Diterima dari Pelanggan:</span>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">Rp</span>
+              <input type="number" id="cashReceivedInput" oninput="calculateCashChange()" placeholder="0" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-100 rounded-xl flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-600">Uang Kembalian:</span>
+            <span id="cashChangeDisplay" class="font-black text-sm text-emerald-600">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- SECTION B: QRIS -->
+        <div id="payContent-qris" class="hidden flex flex-col items-center justify-center p-3 text-center space-y-2">
+          <div class="w-40 h-40 bg-white border-2 border-slate-800 rounded-2xl p-2 flex flex-col items-center justify-center shadow-inner relative">
+            <!-- Simulated QR Pattern -->
+            <svg class="w-32 h-32 text-slate-900" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h-4v2h2v2h-2v2h4v-2h2v-4h-2zm-4-2h2v2h-2v-2zm4 0h2v2h-2v-2zM6 6h2v2H6V6zm10 0h2v2h-2V6zM6 18h2v2H6v-2z"/>
+            </svg>
+            <div class="absolute bottom-1 text-[9px] font-black tracking-widest text-slate-700 bg-white px-1">QRIS STANDAR BI</div>
+          </div>
+          <p class="text-[11px] text-slate-500">Arahkan scan barcode pembayaran e-wallet pelanggan</p>
+          <button onclick="simulateQrisSuccess()" class="py-1.5 px-4 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-xl text-xs font-bold border border-emerald-300 transition">
+            ✓ Simulasi Pembayaran QRIS Masuk
+          </button>
+        </div>
+
+        <!-- SECTION C: EDC / DEBIT -->
+        <div id="payContent-edc" class="hidden space-y-3">
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-slate-700 block">Mesin EDC / Bank:</label>
+            <select id="edcBankSelect" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium">
+              <button>BCA EDC</button>
+              <option value="BCA">EDC BCA (Debit / Credit)</option>
+              <option value="Mandiri">EDC Mandiri</option>
+              <option value="BRI">EDC BRI</option>
+              <option value="BNI">EDC BNI</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-slate-700 block">Nomor Referensi Transaksi (Approval Code):</label>
+            <input type="text" id="edcRefInput" placeholder="Contoh: REF98471203" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button Finish Payment -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <button onclick="closePaymentModal()" class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100">Batal</button>
+        <button onclick="processFinalPayment()" id="btnProcessPayment" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Selesaikan Transaksi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: STRUK INVOICE / RECEIPT ==================== -->
+  <div id="receiptModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col font-mono text-xs">
+      
+      <!-- Struk Body Thermal Style -->
+      <div class="p-6 bg-slate-50 border-b border-dashed border-slate-300 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="text-center space-y-1">
+          <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center mx-auto mb-1">
+            <i data-lucide="utensils" class="w-5 h-5"></i>
+          </div>
+          <h2 class="font-black text-sm text-slate-900">NUSANTARA BISTRO</h2>
+          <p class="text-[10px] text-slate-500">Jl. Tunjungan No. 45, Surabaya<br>Telp: (031) 555-8989</p>
+        </div>
+
+        <div class="border-t border-b border-dashed border-slate-300 py-2 space-y-1 text-[11px] text-slate-600">
+          <div class="flex justify-between"><span>No. Struk:</span><span id="recReceiptNo" class="font-bold">NB-8891</span></div>
+          <div class="flex justify-between"><span>Tanggal:</span><span id="recDateTime">19/11/2026 12:30</span></div>
+          <div class="flex justify-between"><span>Kasir:</span><span>Budi Santoso</span></div>
+          <div class="flex justify-between"><span>Meja:</span><span id="recTableNum" class="font-bold">Meja 01</span></div>
+          <div class="flex justify-between"><span>Sistem:</span><span id="recWorkflowStatus" class="font-bold text-emerald-700">LUNAS</span></div>
+        </div>
+
+        <!-- Struk Items -->
+        <div id="recItemsList" class="space-y-1.5 py-1 text-[11px]">
+          <!-- Dynamic Items -->
+        </div>
+
+        <!-- Struk Totals -->
+        <div class="border-t border-dashed border-slate-300 pt-2 space-y-1 text-[11px]">
+          <div class="flex justify-between text-slate-600"><span>Subtotal:</span><span id="recSubtotal">Rp 0</span></div>
+          <div class="flex justify-between text-slate-600"><span>PB1 (10%):</span><span id="recTax">Rp 0</span></div>
+          <div class="flex justify-between font-black text-xs text-slate-900 pt-1 border-t border-slate-200">
+            <span>TOTAL:</span><span id="recTotal">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-slate-600 pt-1">
+            <span>Metode:</span><span id="recMethod">Tunai</span>
+          </div>
+          <div id="recCashRow" class="flex justify-between text-slate-600">
+            <span>Bayar:</span><span id="recCashPaid">Rp 0</span>
+          </div>
+          <div id="recChangeRow" class="flex justify-between text-slate-600">
+            <span>Kembalian:</span><span id="recChange">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="text-center text-[10px] text-slate-400 pt-2">
+          Terima kasih atas kunjungan Anda!<br>
+          Wifi: NusantaraFree / Sandi: makanyuk
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="p-3 bg-white flex gap-2">
+        <button onclick="printMockReceipt()" class="w-1/2 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i> Cetak Struk
+        </button>
+        <button onclick="closeReceiptAndFinish()" class="w-1/2 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i> Selesai & Lepas Meja
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: GABUNG MEJA (MERGE TABLES) ==================== -->
+  <div id="mergeTableModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+      <div class="p-4 bg-indigo-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-indigo-800 text-indigo-200 flex items-center justify-center">
+            <i data-lucide="merge" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm">Gabung Meja (Merge Tables)</h3>
+            <p class="text-[11px] text-indigo-300">Satukan tagihan & pesanan untuk tamu rombongan</p>
+          </div>
+        </div>
+        <button onclick="closeMergeTableModal()" class="w-8 h-8 rounded-full bg-indigo-800 text-indigo-200 hover:bg-indigo-700 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <!-- 1. Pilih Meja Utama -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span>1. Pilih Meja Utama (Master Table)</span>
+            <span class="text-[10px] text-slate-400">Tagihan akan menginduk ke meja ini</span>
+          </label>
+          <select id="mergeMasterSelect" onchange="renderMergeTargetCheckboxes()" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <!-- Dynamic master table options -->
+          </select>
+        </div>
+
+        <!-- 2. Pilih Meja yang Ingin Digabung -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-700 block">
+            2. Centang Meja yang Ingin Digabungkan:
+          </label>
+          <div id="mergeTargetList" class="space-y-1.5 max-h-48 overflow-y-auto bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+            <!-- Dynamic target table checkboxes -->
+          </div>
+        </div>
+
+        <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 space-y-1">
+          <div class="font-bold flex items-center gap-1.5">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Informasi Penggabungan:
+          </div>
+          <p class="text-[11px] text-amber-700">Semua pesanan meja terpilih akan digabung ke tagihan Meja Utama. Meja gabungan dapat dipisahkan kembali kapan saja (*Pisah Meja*) atau otomatis terpisah saat pembayaran lunas.</p>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <button onclick="closeMergeTableModal()" class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100">Batal</button>
+        <button onclick="confirmMergeTables()" class="w-2/3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md">
+          <i data-lucide="check" class="w-4 h-4"></i> Terapkan Penggabungan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: INFO PETUNJUK APLIKASI ==================== -->
+  <div id="quickInfoModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3 border-slate-200">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center font-bold">POS</div>
+          <h3 class="font-extrabold text-sm text-slate-900">Alur Pengoperasian POS Tablet</h3>
+        </div>
+        <button onclick="hideQuickInfoModal()" class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2.5 text-xs text-slate-600">
+        <div class="flex items-start gap-2">
+          <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">1</span>
+          <p><strong>Pilih Alur Restoran:</strong> Gunakan tombol <em>Makan Dulu</em> (restoran casual/dine-in) atau <em>Bayar Dulu</em> (food court/cafe/fast food) di header atau keranjang.</p>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">2</span>
+          <p><strong>Mode Makan Dulu:</strong> Pesan &rarr; Kirim ke Dapur &rarr; Koki Masak &rarr; Makanan Diantar &rarr; Kasir Bayar setelah tamu selesai makan.</p>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">3</span>
+          <p><strong>Mode Bayar Dulu:</strong> Pesan &rarr; Bayar Langsung di Awal &rarr; KDS Dapur menerima tiket bertanda <em>[LUNAS]</em> &rarr; Makanan siap saji diantar & meja otomatis selesai!</p>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">4</span>
+          <p><strong>Gabung Meja:</strong> Satukan meja untuk rombongan besar melalui tombol <em>Gabung Meja</em> kapan saja.</p>
+        </div>
+      </div>
+
+      <button onclick="hideQuickInfoModal()" class="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl">Tutup Petunjuk</button>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION CORE ==================== -->
+  <script>
+    // --- AUDIO SYNTHESIZER FEEDBACK ---
+    let isAudioMuted = false;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function toggleAudioMute() {
+      isAudioMuted = !isAudioMuted;
+      const btn = document.getElementById('btnAudioToggle');
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="${isAudioMuted ? 'volume-x' : 'volume-2'}" class="w-4 h-4"></i>`;
+        lucide.createIcons();
+      }
+      showToast(isAudioMuted ? 'Suara dinonaktifkan' : 'Suara diaktifkan');
+    }
+
+    function playAudioTone(type) {
+      if (isAudioMuted) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'tap') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(420, now);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        } else if (type === 'bell') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(1320, now + 0.25);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+          osc.start(now);
+          osc.stop(now + 0.65);
+        } else if (type === 'success') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.09);
+          osc.frequency.setValueAtTime(783.99, now + 0.18);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        }
+      } catch (e) {
+        console.warn('Audio feedback notice:', e);
+      }
+    }
+
+    // --- DEFAULT SEED DATA ---
+    const DEFAULT_TABLES = [
+      { id: 1, name: 'Meja 01', area: 'indoor', capacity: 2, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 2, name: 'Meja 02', area: 'indoor', capacity: 4, status: 'dimasak', mergedWith: [], parentTableId: null, order: {
+        orderId: 'ORD-701',
+        items: [
+          { id: 'm1', name: 'Nasi Goreng Spesial', price: 35000, qty: 2, variant: 'Pedas Sedang', notes: 'Telur ceplok matang', done: false },
+          { id: 'd1', name: 'Es Teh Lemon', price: 15000, qty: 2, variant: 'Less Ice', notes: '', done: true }
+        ],
+        createdAt: Date.now() - 360000
+      }},
+      { id: 3, name: 'Meja 03', area: 'indoor', capacity: 4, status: 'siap', mergedWith: [], parentTableId: null, order: {
+        orderId: 'ORD-702',
+        items: [
+          { id: 'm2', name: 'Ayam Bakar Madu', price: 42000, qty: 1, variant: 'Manis Gurih', notes: 'Sambal terpisah', done: true },
+          { id: 'c1', name: 'Dimsum Mentai Panggang', price: 28000, qty: 1, variant: 'Isi 4 pcs', notes: '', done: true }
+        ],
+        createdAt: Date.now() - 720000
+      }},
+      { id: 4, name: 'Meja 04', area: 'indoor', capacity: 6, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 5, name: 'Meja 05', area: 'indoor', capacity: 2, status: 'bayar', mergedWith: [], parentTableId: null, order: {
+        orderId: 'ORD-700',
+        items: [
+          { id: 'p1', name: 'Paket Komplit Liwet Solo', price: 55000, qty: 2, variant: 'Standar', notes: '', done: true }
+        ],
+        createdAt: Date.now() - 1500000
+      }},
+      { id: 6, name: 'Meja 06', area: 'indoor', capacity: 4, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 7, name: 'Meja 07', area: 'outdoor', capacity: 4, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 8, name: 'Meja 08', area: 'outdoor', capacity: 4, status: 'dimasak', mergedWith: [], parentTableId: null, order: {
+        orderId: 'ORD-703',
+        items: [
+          { id: 'k1', name: 'Kopi Susu Gula Aren', price: 22000, qty: 2, variant: 'Normal Ice', notes: '', done: false },
+          { id: 'c2', name: 'Tahu Cabe Garam Crispy', price: 20000, qty: 1, variant: 'Pedas Pol', notes: 'Bawang banyak', done: false }
+        ],
+        createdAt: Date.now() - 180000
+      }},
+      { id: 9, name: 'Meja 09', area: 'outdoor', capacity: 6, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 10, name: 'Meja 10', area: 'outdoor', capacity: 2, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 11, name: 'Meja 11', area: 'outdoor', capacity: 4, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+      { id: 12, name: 'Meja 12', area: 'outdoor', capacity: 8, status: 'kosong', mergedWith: [], parentTableId: null, order: null },
+    ];
+
+    // --- APPLICATION STATE ---
+    const APP_STATE = {
+      activeScreen: 'kasir',
+      kasirSubView: 'floorplan',
+      activeTableId: null,
+      selectedAreaFilter: 'all',
+      selectedCategory: 'all',
+      kdsFilter: 'all',
+      activePaymentMethod: 'cash',
+      lastCompletedOrder: null,
+      workflowMode: 'postpaid', // 'postpaid' (Makan Dulu) atau 'prepaid' (Bayar Dulu)
+
+      modalPendingItem: null,
+      modalSelectedVariant: null,
+      modalQty: 1,
+
+      tables: [],
+
+      menu: [
+        { id: 'm1', name: 'Nasi Goreng Spesial', category: 'makanan', price: 35000, image: '🍛', desc: 'Ayam suwir, telur mata sapi, kerupuk udang', variants: ['Tidak Pedas', 'Pedas Sedang', 'Pedas Pol'] },
+        { id: 'm2', name: 'Ayam Bakar Madu', category: 'makanan', price: 42000, image: '🍗', desc: 'Ayam bakar rempah manis gurih + sambal bajak', variants: ['Paha', 'Dada'] },
+        { id: 'm3', name: 'Mie Goreng Jawa Klasik', category: 'makanan', price: 32000, image: '🍝', desc: 'Mie telur kenyal dengan suwir ayam & kekian', variants: ['Sedang', 'Pedas'] },
+        { id: 'm4', name: 'Sop Buntut Gurih', category: 'makanan', price: 68000, image: '🍲', desc: 'Buntut sapi empuk berkuah kaldu rempah hangat', variants: ['Kuah Terpisah', 'Kuah Campur'] },
+        { id: 'c1', name: 'Dimsum Mentai Panggang', category: 'camilan', price: 28000, image: '🥟', desc: 'Dimsum ayam udang dengan saus mentai bakar', variants: ['Isi 4 pcs', 'Isi 6 pcs'] },
+        { id: 'c2', name: 'Tahu Cabe Garam Crispy', category: 'camilan', price: 20000, image: '🍢', desc: 'Tahu sutra krispi bertabur bawang & cabe segar', variants: ['Pedas Santai', 'Pedas Pol'] },
+        { id: 'c3', name: 'Kentang Goreng Truffle', category: 'camilan', price: 26000, image: '🍟', desc: 'Shoestring french fries dengan minyak aroma truffle', variants: ['Saus Keju', 'Saus Tartar'] },
+        { id: 'c4', name: 'Pisang Bakar Cokelat Keju', category: 'camilan', price: 22000, image: '🍌', desc: 'Pisang kepok manis bertabur meses coklat & cheddar', variants: ['Original', 'Extra Keju'] },
+        { id: 'k1', name: 'Kopi Susu Gula Aren', category: 'kopi', price: 22000, image: '☕', desc: 'Espresso blend, fresh milk & gula aren murni', variants: ['Normal Ice', 'Less Ice', 'Panas (Hot)'] },
+        { id: 'k2', name: 'Caramel Macchiato', category: 'kopi', price: 29000, image: '🥛', desc: 'Layer espresso, susu vanila dan saus karamel lezat', variants: ['Dingin', 'Panas'] },
+        { id: 'k3', name: 'Artisan Green Matcha Latte', category: 'kopi', price: 27000, image: '🍵', desc: 'Pure matcha Jepang berpadu dengan susu lembut', variants: ['Manis Normal', 'Less Sugar'] },
+        { id: 'd1', name: 'Es Teh Lemon Mint', category: 'segar', price: 15000, image: '🍹', desc: 'Teh melati seduh dingin dengan perasan lemon segar', variants: ['Dingin Segar', 'Less Ice'] },
+        { id: 'd2', name: 'Jus Alpukat Kocok', category: 'segar', price: 25000, image: '🥑', desc: 'Alpukat mentega legit dengan serutan es dan cokelat', variants: ['Kental', 'Manis Sedang'] },
+        { id: 'd3', name: 'Berry Tropical Mocktail', category: 'segar', price: 26000, image: '🍸', desc: 'Soda segar berpadu sari buah strawberry & mint', variants: ['Normal Soda', 'Less Ice'] },
+        { id: 'p1', name: 'Paket Komplit Liwet Solo', category: 'paket', price: 55000, image: '🍱', desc: 'Nasi gurih liwet, ayam areh, sayur labu, telur + Es Teh', variants: ['Ayam Paha', 'Ayam Dada'] },
+        { id: 'p2', name: 'Paket Ngopi Sore Hemat', category: 'paket', price: 38000, image: '☕', desc: '1 Kopi Susu Aren + 1 Porsi Tahu Cabe Garam', variants: ['Kopi Dingin', 'Kopi Panas'] },
+      ],
+
+      cart: []
+    };
+
+    const formatRp = (num) => 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+
+    // --- LOCAL STORAGE PERSISTENCE ---
+    function saveStateToStorage() {
+      try {
+        localStorage.setItem('pos_bistro_tables', JSON.stringify(APP_STATE.tables));
+        localStorage.setItem('pos_bistro_workflow', APP_STATE.workflowMode);
+      } catch (e) {
+        console.warn('LocalStorage error:', e);
+      }
+    }
+
+    function loadStateFromStorage() {
+      try {
+        const savedWorkflow = localStorage.getItem('pos_bistro_workflow');
+        if (savedWorkflow === 'prepaid' || savedWorkflow === 'postpaid') {
+          APP_STATE.workflowMode = savedWorkflow;
+        }
+        const saved = localStorage.getItem('pos_bistro_tables');
+        if (saved) {
+          APP_STATE.tables = JSON.parse(saved);
+        } else {
+          APP_STATE.tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+        }
+      } catch (e) {
+        APP_STATE.tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+      }
+    }
+
+    // --- ALUR TRANSAKSI TOGGLE (Makan Dulu vs Bayar Dulu) ---
+    function setWorkflowMode(mode) {
+      playAudioTone('tap');
+      APP_STATE.workflowMode = mode;
+      saveStateToStorage();
+      updateWorkflowUI();
+      renderCart();
+      const modeLabel = mode === 'prepaid' ? 'Bayar Dulu (Prepaid)' : 'Makan Dulu Baru Bayar (Postpaid)';
+      showToast(`Sistem diubah ke: ${modeLabel}`, 'info');
+    }
+
+    function updateWorkflowUI() {
+      const isPrepaid = APP_STATE.workflowMode === 'prepaid';
+
+      // Update Header Buttons
+      const hdrPost = document.getElementById('hdrWorkflowPostpaid');
+      const hdrPre = document.getElementById('hdrWorkflowPrepaid');
+      if (hdrPost && hdrPre) {
+        if (!isPrepaid) {
+          hdrPost.className = 'px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 bg-brand-600 text-white shadow-sm';
+          hdrPre.className = 'px-2.5 py-1.5 rounded-xl font-semibold transition flex items-center gap-1.5 text-slate-300 hover:text-white';
+        } else {
+          hdrPost.className = 'px-2.5 py-1.5 rounded-xl font-semibold transition flex items-center gap-1.5 text-slate-300 hover:text-white';
+          hdrPre.className = 'px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 bg-brand-600 text-white shadow-sm';
+        }
+      }
+
+      // Update Cart Switcher Buttons
+      const cartPost = document.getElementById('cartModePostpaid');
+      const cartPre = document.getElementById('cartModePrepaid');
+      if (cartPost && cartPre) {
+        if (!isPrepaid) {
+          cartPost.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition bg-brand-600 text-white shadow-xs';
+          cartPre.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition text-slate-600 hover:text-slate-900';
+        } else {
+          cartPost.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition text-slate-600 hover:text-slate-900';
+          cartPre.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition bg-brand-600 text-white shadow-xs';
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function resetDemoData() {
+      playAudioTone('tap');
+      APP_STATE.tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+      APP_STATE.cart = [];
+      APP_STATE.activeTableId = null;
+      APP_STATE.workflowMode = 'postpaid';
+      saveStateToStorage();
+      updateWorkflowUI();
+      backToFloorPlan();
+      updateBadgeCounts();
+      showToast('Data simulasi meja dan pesanan berhasil direset!', 'info');
+    }
+
+    // --- INIT ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStateFromStorage();
+      lucide.createIcons();
+      startLiveClock();
+      updateWorkflowUI();
+      renderFloorPlan();
+      renderMenuCatalog();
+      updateBadgeCounts();
+    });
+
+    function startLiveClock() {
+      const clockEl = document.getElementById('liveClock');
+      setInterval(() => {
+        const now = new Date();
+        if (clockEl) clockEl.textContent = now.toLocaleTimeString('id-ID');
+      }, 1000);
+    }
+
+    // --- NAVIGATION CONTROLLER ---
+    function switchScreen(screen) {
+      playAudioTone('tap');
+      APP_STATE.activeScreen = screen;
+
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+        tab.classList.add('text-slate-300');
+      });
+      const activeNav = document.getElementById(`nav-btn-${screen}`);
+      if (activeNav) {
+        activeNav.classList.remove('text-slate-300');
+        activeNav.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+      }
+
+      document.getElementById('screen-kasir').classList.add('hidden');
+      document.getElementById('screen-kds').classList.add('hidden');
+      document.getElementById('screen-waiter').classList.add('hidden');
+
+      const headerText = document.getElementById('headerCurrentTableText');
+
+      if (screen === 'kasir') {
+        document.getElementById('screen-kasir').classList.remove('hidden');
+        if (APP_STATE.kasirSubView === 'order' && APP_STATE.activeTableId) {
+          const table = APP_STATE.tables.find(t => t.id === APP_STATE.activeTableId);
+          headerText.textContent = `Pemesanan: ${getTableDisplayName(table)}`;
+        } else {
+          headerText.textContent = 'Mode: Memilih Meja';
+          renderFloorPlan();
+        }
+      } else if (screen === 'kds') {
+        document.getElementById('screen-kds').classList.remove('hidden');
+        headerText.textContent = 'Mode: Dapur / KDS';
+        renderKDSTickets();
+      } else if (screen === 'waiter') {
+        document.getElementById('screen-waiter').classList.remove('hidden');
+        headerText.textContent = 'Mode: Siap Saji / Pramusaji';
+        renderWaiterScreen();
+      }
+
+      lucide.createIcons();
+    }
+
+    function getTableDisplayName(table) {
+      if (!table) return '';
+      if (table.mergedWith && table.mergedWith.length > 0) {
+        const mergedNames = table.mergedWith.map(id => {
+          const t = APP_STATE.tables.find(x => x.id === id);
+          return t ? t.name : '';
+        }).filter(Boolean);
+        return `${table.name} + ${mergedNames.join(' + ')} (Gabung)`;
+      }
+      return table.name;
+    }
+
+    function getTotalTableCapacity(table) {
+      if (!table) return 0;
+      let total = table.capacity;
+      if (table.mergedWith && table.mergedWith.length > 0) {
+        table.mergedWith.forEach(id => {
+          const t = APP_STATE.tables.find(x => x.id === id);
+          if (t) total += t.capacity;
+        });
+      }
+      return total;
+    }
+
+    // --- FLOOR PLAN CONTROLLER ---
+    function filterTableArea(area) {
+      playAudioTone('tap');
+      APP_STATE.selectedAreaFilter = area;
+
+      document.querySelectorAll('.area-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-900', 'text-white');
+        btn.classList.add('text-slate-600');
+      });
+      const activeBtn = document.getElementById(`btn-area-${area}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-600');
+        activeBtn.classList.add('bg-slate-900', 'text-white');
+      }
+
+      renderFloorPlan();
+    }
+
+    function renderFloorPlan() {
+      const container = document.getElementById('tableGridContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const filteredTables = APP_STATE.tables.filter(t => {
+        if (APP_STATE.selectedAreaFilter === 'all') return true;
+        return t.area === APP_STATE.selectedAreaFilter;
+      });
+
+      filteredTables.forEach(table => {
+        const isChild = table.parentTableId !== null;
+        const isMaster = table.mergedWith && table.mergedWith.length > 0;
+
+        let statusBadgeClass = '';
+        let statusLabel = '';
+        let borderClass = 'border-slate-200';
+        let bgGradient = 'bg-white';
+        let pulsing = '';
+
+        if (isChild) {
+          const parent = APP_STATE.tables.find(t => t.id === table.parentTableId);
+          statusBadgeClass = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+          statusLabel = `Gabung ke ${parent ? parent.name : 'Master'}`;
+          bgGradient = 'bg-indigo-50/40 border-indigo-200 border-dashed';
+        } else {
+          const isTablePaid = table.isPaid || (table.order && table.order.isPaid);
+          switch (table.status) {
+            case 'kosong':
+              statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+              statusLabel = 'Kosong';
+              bgGradient = 'bg-white hover:border-emerald-400 hover:shadow-md';
+              break;
+            case 'memilih':
+              statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-300';
+              statusLabel = 'Memilih Menu';
+              bgGradient = 'bg-blue-50/50 border-blue-200';
+              break;
+            case 'dimasak':
+              if (isTablePaid) {
+                statusBadgeClass = 'bg-teal-100 text-teal-800 border-teal-300 font-extrabold';
+                statusLabel = 'Lunas • Dimasak';
+                bgGradient = 'bg-teal-50/50 border-teal-300';
+              } else {
+                statusBadgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+                statusLabel = 'Dimasak di Dapur';
+                bgGradient = 'bg-amber-50/40 border-amber-300';
+              }
+              break;
+            case 'siap':
+              if (isTablePaid) {
+                statusBadgeClass = 'bg-emerald-600 text-white border-emerald-700 font-extrabold shadow-sm';
+                statusLabel = 'Lunas • Siap Saji 🔔';
+              } else {
+                statusBadgeClass = 'bg-emerald-500 text-white border-emerald-600 font-extrabold shadow-sm';
+                statusLabel = 'Siap Saji! 🔔';
+              }
+              bgGradient = 'bg-emerald-50 border-emerald-400 shadow-md ring-2 ring-emerald-400 animate-ready';
+              pulsing = 'animate-pulse';
+              break;
+            case 'bayar':
+              statusBadgeClass = 'bg-purple-100 text-purple-800 border-purple-300';
+              statusLabel = 'Menunggu Bayar';
+              bgGradient = 'bg-purple-50/50 border-purple-300';
+              break;
+          }
+        }
+
+        let orderTotal = 0;
+        let itemCount = 0;
+        if (table.order && table.order.items) {
+          itemCount = table.order.items.reduce((sum, it) => sum + it.qty, 0);
+          const subtotal = table.order.items.reduce((sum, it) => sum + (it.price * it.qty), 0);
+          orderTotal = subtotal + (subtotal * 0.1);
+        }
+
+        const totalCapacity = getTotalTableCapacity(table);
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between min-h-[160px] ${bgGradient} ${borderClass}`;
+        card.onclick = () => onSelectTable(table.id);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between mb-1.5 gap-1">
+              <div>
+                <span class="font-black text-slate-800 text-base flex items-center gap-1.5">
+                  ${table.name}
+                  ${isMaster ? `<span class="bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">MASTER</span>` : ''}
+                </span>
+                ${isMaster ? `
+                  <p class="text-[10px] text-indigo-700 font-bold mt-0.5 flex items-center gap-1">
+                    <i data-lucide="merge" class="w-3 h-3"></i> Digabung: ${table.mergedWith.map(id => 'M' + String(id).padStart(2,'0')).join(', ')}
+                  </p>
+                ` : ''}
+              </div>
+              <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border text-center ${statusBadgeClass} ${pulsing}">
+                ${statusLabel}
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i>
+              <span>${totalCapacity} Kursi • <span class="capitalize">${table.area}</span></span>
+            </div>
+          </div>
+
+          <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            ${isChild ? `
+              <span class="text-indigo-600 font-semibold text-[11px] flex items-center gap-1">
+                <i data-lucide="corner-down-right" class="w-3.5 h-3.5"></i> Masuk Meja Utama
+              </span>
+              <button onclick="event.stopPropagation(); unmergeSingleTable(${table.id})" class="text-[10px] text-rose-500 font-bold hover:underline" title="Pisahkan meja ini">
+                Lepas
+              </button>
+            ` : table.order ? `
+              <div>
+                <p class="text-[10px] text-slate-400">${itemCount} Menu Dipesan</p>
+                <p class="font-extrabold text-slate-800">${formatRp(orderTotal)}</p>
+              </div>
+              <div class="flex items-center gap-1">
+                ${isMaster ? `
+                  <button onclick="event.stopPropagation(); unmergeMasterTable(${table.id})" class="text-[10px] px-2 py-1 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-lg font-bold" title="Pisah meja">
+                    Pisah
+                  </button>
+                ` : ''}
+                <span class="px-2 py-1 rounded-lg bg-slate-900 text-white text-[10px] font-bold">Buka</span>
+              </div>
+            ` : `
+              <span class="text-emerald-600 font-semibold text-[11px] flex items-center gap-1">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Sentuh Buka
+              </span>
+              ${isMaster ? `
+                <button onclick="event.stopPropagation(); unmergeMasterTable(${table.id})" class="text-[10px] px-2 py-1 bg-rose-50 text-rose-600 rounded-lg font-bold" title="Pisah meja">
+                  Pisah
+                </button>
+              ` : `
+                <span class="text-slate-300 text-xs">Tersedia</span>
+              `}
+            `}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function onSelectTable(tableId) {
+      playAudioTone('tap');
+      let targetId = tableId;
+      const targetTable = APP_STATE.tables.find(t => t.id === targetId);
+      if (!targetTable) return;
+
+      // Jika meja adalah child (digabung), otomatis arahkan ke Master Table
+      if (targetTable.parentTableId !== null) {
+        const parent = APP_STATE.tables.find(t => t.id === targetTable.parentTableId);
+        showToast(`${targetTable.name} digabung ke ${parent ? parent.name : 'Master'}. Mengalihkan ke Meja Utama.`, 'info');
+        targetId = targetTable.parentTableId;
+      }
+
+      APP_STATE.activeTableId = targetId;
+      const masterTable = APP_STATE.tables.find(t => t.id === targetId);
+
+      if (masterTable.status === 'kosong') {
+        masterTable.status = 'memilih';
+        APP_STATE.cart = [];
+      } else if (masterTable.order && masterTable.order.items) {
+        APP_STATE.cart = JSON.parse(JSON.stringify(masterTable.order.items));
+      } else {
+        APP_STATE.cart = [];
+      }
+
+      saveStateToStorage();
+
+      APP_STATE.kasirSubView = 'order';
+      document.getElementById('view-floorplan').classList.add('hidden');
+      document.getElementById('view-order').classList.remove('hidden');
+
+      const fullDisplayName = getTableDisplayName(masterTable);
+      document.getElementById('currentTableBadge').textContent = fullDisplayName;
+      document.getElementById('currentTableAreaBadge').textContent = `${getTotalTableCapacity(masterTable)} Kursi • Area ${masterTable.area.toUpperCase()}`;
+      document.getElementById('cartTableSummary').textContent = `${masterTable.name} • Status: ${masterTable.status.toUpperCase()}`;
+      document.getElementById('headerCurrentTableText').textContent = `Pemesanan: ${fullDisplayName}`;
+
+      renderCart();
+      lucide.createIcons();
+    }
+
+    function backToFloorPlan() {
+      playAudioTone('tap');
+      APP_STATE.kasirSubView = 'floorplan';
+      document.getElementById('view-order').classList.add('hidden');
+      document.getElementById('view-floorplan').classList.remove('hidden');
+      document.getElementById('headerCurrentTableText').textContent = 'Mode: Memilih Meja';
+      renderFloorPlan();
+    }
+
+    // --- FITUR GABUNG MEJA (MERGE TABLES) ---
+    function openMergeTableModal() {
+      playAudioTone('tap');
+      const masterSelect = document.getElementById('mergeMasterSelect');
+      masterSelect.innerHTML = '';
+
+      // Meja yang bisa jadi Master: Meja yang BUKAN child
+      const eligibleMasters = APP_STATE.tables.filter(t => t.parentTableId === null);
+
+      eligibleMasters.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        const note = t.mergedWith && t.mergedWith.length > 0 ? ` [Sudah gabung (${t.mergedWith.length} meja)]` : (t.status === 'kosong' ? ' [Kosong]' : ` [${t.status}]`);
+        opt.textContent = `${t.name} (${t.area.toUpperCase()} - ${t.capacity} Kursi)${note}`;
+        masterSelect.appendChild(opt);
+      });
+
+      renderMergeTargetCheckboxes();
+      document.getElementById('mergeTableModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function renderMergeTargetCheckboxes() {
+      const masterId = Number(document.getElementById('mergeMasterSelect').value);
+      const container = document.getElementById('mergeTargetList');
+      container.innerHTML = '';
+
+      const master = APP_STATE.tables.find(t => t.id === masterId);
+      const currentlyMerged = master ? master.mergedWith || [] : [];
+
+      // Meja target: meja selain master, dan bukan anak dari master lain
+      const candidateTables = APP_STATE.tables.filter(t => t.id !== masterId && (t.parentTableId === null || t.parentTableId === masterId));
+
+      if (candidateTables.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 p-2">Tidak ada meja lain yang dapat digabungkan.</p>';
+        return;
+      }
+
+      candidateTables.forEach(t => {
+        const isChecked = currentlyMerged.includes(t.id);
+        const label = document.createElement('label');
+        label.className = "flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 transition cursor-pointer border border-transparent hover:border-slate-200";
+
+        label.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <input type="checkbox" value="${t.id}" class="merge-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}>
+            <div>
+              <span class="text-xs font-bold text-slate-800">${t.name}</span>
+              <span class="text-[11px] text-slate-400 block">${t.capacity} Kursi • Area ${t.area}</span>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${t.status === 'kosong' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}">
+            ${t.status}
+          </span>
+        `;
+        container.appendChild(label);
+      });
+    }
+
+    function closeMergeTableModal() {
+      document.getElementById('mergeTableModal').classList.add('hidden');
+    }
+
+    function confirmMergeTables() {
+      playAudioTone('success');
+      const masterId = Number(document.getElementById('mergeMasterSelect').value);
+      const master = APP_STATE.tables.find(t => t.id === masterId);
+      if (!master) return;
+
+      const checkedCheckboxes = document.querySelectorAll('.merge-checkbox:checked');
+      const selectedTargetIds = Array.from(checkedCheckboxes).map(cb => Number(cb.value));
+
+      // Kembalikan meja yang sebelumnya di-merge tapi sekarang di-uncheck
+      (master.mergedWith || []).forEach(prevId => {
+        if (!selectedTargetIds.includes(prevId)) {
+          const prevTable = APP_STATE.tables.find(t => t.id === prevId);
+          if (prevTable) {
+            prevTable.parentTableId = null;
+            if (!prevTable.order) prevTable.status = 'kosong';
+          }
+        }
+      });
+
+      // Terapkan merge pada meja terpilih
+      selectedTargetIds.forEach(targetId => {
+        const target = APP_STATE.tables.find(t => t.id === targetId);
+        if (target) {
+          target.parentTableId = master.id;
+          // Jika target punya pesanan, satukan ke master
+          if (target.order && target.order.items) {
+            if (!master.order) {
+              master.order = {
+                orderId: 'ORD-' + Math.floor(100 + Math.random() * 900),
+                items: [],
+                createdAt: Date.now()
+              };
+            }
+            target.order.items.forEach(it => {
+              master.order.items.push(it);
+            });
+            target.order = null;
+          }
+          target.status = 'memilih';
+        }
+      });
+
+      master.mergedWith = selectedTargetIds;
+      if (selectedTargetIds.length > 0 && master.status === 'kosong') {
+        master.status = 'memilih';
+      }
+
+      saveStateToStorage();
+      closeMergeTableModal();
+      renderFloorPlan();
+      showToast(`Meja berhasil digabungkan ke ${master.name}!`, 'success');
+    }
+
+    function unmergeMasterTable(masterId) {
+      playAudioTone('tap');
+      const master = APP_STATE.tables.find(t => t.id === masterId);
+      if (!master) return;
+
+      (master.mergedWith || []).forEach(childId => {
+        const child = APP_STATE.tables.find(t => t.id === childId);
+        if (child) {
+          child.parentTableId = null;
+          child.status = 'kosong';
+          child.order = null;
+        }
+      });
+
+      master.mergedWith = [];
+      saveStateToStorage();
+      renderFloorPlan();
+      showToast(`Penggabungan pada ${master.name} dibatalkan (Meja dipisah).`, 'info');
+    }
+
+    function unmergeSingleTable(childId) {
+      playAudioTone('tap');
+      const child = APP_STATE.tables.find(t => t.id === childId);
+      if (!child || child.parentTableId === null) return;
+
+      const master = APP_STATE.tables.find(t => t.id === child.parentTableId);
+      if (master && master.mergedWith) {
+        master.mergedWith = master.mergedWith.filter(id => id !== childId);
+      }
+
+      child.parentTableId = null;
+      child.status = 'kosong';
+      child.order = null;
+
+      saveStateToStorage();
+      renderFloorPlan();
+      showToast(`${child.name} berhasil dipisahkan kembali.`, 'info');
+    }
+
+    // --- KATALOG MENU & MODIFIER ---
+    function selectCategory(cat) {
+      playAudioTone('tap');
+      APP_STATE.selectedCategory = cat;
+
+      document.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+        btn.classList.add('bg-slate-100', 'text-slate-600');
+      });
+      const activeBtn = document.querySelector(`.cat-pill[data-cat="${cat}"]`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-100', 'text-slate-600');
+        activeBtn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+      }
+
+      renderMenuCatalog();
+    }
+
+    function filterMenuCatalog() {
+      renderMenuCatalog();
+    }
+
+    function renderMenuCatalog() {
+      const container = document.getElementById('menuCatalogGrid');
+      if (!container) return;
+      const searchQuery = (document.getElementById('menuSearchInput')?.value || '').toLowerCase().trim();
+
+      const items = APP_STATE.menu.filter(item => {
+        const matchCat = (APP_STATE.selectedCategory === 'all') || (item.category === APP_STATE.selectedCategory);
+        const matchSearch = item.name.toLowerCase().includes(searchQuery) || item.desc.toLowerCase().includes(searchQuery);
+        return matchCat && matchSearch;
+      });
+
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400">
+            <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+            <p class="font-bold text-sm">Menu tidak ditemukan</p>
+            <p class="text-xs">Coba cari kata kunci lain</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer active:scale-[0.98]";
+        card.onclick = () => openModifierModal(item);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                ${item.image}
+              </div>
+              <button class="w-8 h-8 rounded-xl bg-brand-50 hover:bg-brand-600 text-brand-600 hover:text-white flex items-center justify-center transition shadow-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <h4 class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">${item.name}</h4>
+            <p class="text-[11px] text-slate-400 line-clamp-2 mt-0.5 leading-tight">${item.desc}</p>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span class="font-black text-brand-600 text-xs sm:text-sm">${formatRp(item.price)}</span>
+            <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full capitalize">${item.category}</span>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function openModifierModal(item) {
+      playAudioTone('tap');
+      APP_STATE.modalPendingItem = item;
+      APP_STATE.modalQty = 1;
+      APP_STATE.modalSelectedVariant = item.variants && item.variants.length > 0 ? item.variants[0] : 'Standar';
+
+      document.getElementById('modModalIcon').textContent = item.image;
+      document.getElementById('modModalTitle').textContent = item.name;
+      document.getElementById('modModalPrice').textContent = formatRp(item.price);
+      document.getElementById('modQtyText').textContent = '1';
+      document.getElementById('modNotesInput').value = '';
+
+      const varContainer = document.getElementById('modOptionButtons');
+      varContainer.innerHTML = '';
+
+      if (item.variants && item.variants.length > 0) {
+        item.variants.forEach((v, idx) => {
+          const btn = document.createElement('button');
+          btn.className = `py-2 px-2.5 rounded-xl text-xs font-bold border transition ${idx === 0 ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-100 text-slate-700 border-slate-200'}`;
+          btn.textContent = v;
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            APP_STATE.modalSelectedVariant = v;
+            varContainer.querySelectorAll('button').forEach(b => {
+              b.className = 'py-2 px-2.5 rounded-xl text-xs font-bold border transition bg-slate-100 text-slate-700 border-slate-200';
+            });
+            btn.className = 'py-2 px-2.5 rounded-xl text-xs font-bold border transition bg-brand-600 text-white border-brand-600';
+          };
+          varContainer.appendChild(btn);
+        });
+        document.getElementById('modOptionGroup').classList.remove('hidden');
+      } else {
+        document.getElementById('modOptionGroup').classList.add('hidden');
+      }
+
+      document.getElementById('modifierModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModifierModal() {
+      document.getElementById('modifierModal').classList.add('hidden');
+    }
+
+    function adjustModQty(delta) {
+      playAudioTone('tap');
+      APP_STATE.modalQty = Math.max(1, APP_STATE.modalQty + delta);
+      document.getElementById('modQtyText').textContent = APP_STATE.modalQty;
+    }
+
+    function confirmAddToCart() {
+      playAudioTone('tap');
+      const item = APP_STATE.modalPendingItem;
+      const notes = document.getElementById('modNotesInput').value.trim();
+      const variant = APP_STATE.modalSelectedVariant || 'Standar';
+
+      const existing = APP_STATE.cart.find(ci => ci.id === item.id && ci.variant === variant && ci.notes === notes);
+      if (existing) {
+        existing.qty += APP_STATE.modalQty;
+      } else {
+        APP_STATE.cart.push({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          qty: APP_STATE.modalQty,
+          variant: variant,
+          notes: notes,
+          done: false
+        });
+      }
+
+      closeModifierModal();
+      renderCart();
+      showToast(`+${APP_STATE.modalQty} ${item.name} ditambahkan`);
+    }
+
+    // --- KERANJANG PESANAN (CART) ---
+    function renderCart() {
+      const container = document.getElementById('cartItemsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (APP_STATE.cart.length === 0) {
+        container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+            <i data-lucide="shopping-cart" class="w-10 h-10 mb-2 stroke-1 text-slate-300"></i>
+            <p class="font-bold text-xs text-slate-600">Keranjang Masih Kosong</p>
+            <p class="text-[11px] text-slate-400">Pilih menu di sebelah kiri untuk menambah pesanan meja ini.</p>
+          </div>
+        `;
+        updateCartTotals(0);
+        lucide.createIcons();
+        return;
+      }
+
+      let subtotal = 0;
+
+      APP_STATE.cart.forEach((item, index) => {
+        const itemTotal = item.price * item.qty;
+        subtotal += itemTotal;
+
+        const row = document.createElement('div');
+        row.className = "py-2 flex flex-col gap-1";
+
+        row.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <h5 class="font-bold text-slate-800 text-xs">${item.name}</h5>
+              <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">${item.variant}</span>
+                <span>${formatRp(item.price)}</span>
+              </div>
+            </div>
+            <span class="font-bold text-xs text-slate-900">${formatRp(itemTotal)}</span>
+          </div>
+
+          ${item.notes ? `
+            <p class="text-[10px] text-amber-700 bg-amber-50 p-1 rounded border border-amber-200 italic">
+              "${item.notes}"
+            </p>
+          ` : ''}
+
+          <div class="flex items-center justify-between pt-1">
+            <button onclick="removeCartItem(${index})" class="text-[10px] text-rose-500 hover:text-rose-700 flex items-center gap-0.5 font-medium">
+              <i data-lucide="trash-2" class="w-3 h-3"></i> Hapus
+            </button>
+            <div class="flex items-center gap-2 bg-slate-100 p-0.5 rounded-lg">
+              <button onclick="updateCartItemQty(${index}, -1)" class="w-5 h-5 rounded bg-white shadow-sm flex items-center justify-center font-bold text-xs text-slate-700 hover:bg-slate-200">-</button>
+              <span class="text-xs font-black w-4 text-center text-slate-800">${item.qty}</span>
+              <button onclick="updateCartItemQty(${index}, 1)" class="w-5 h-5 rounded bg-white shadow-sm flex items-center justify-center font-bold text-xs text-slate-700 hover:bg-slate-200">+</button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(row);
+      });
+
+      updateCartTotals(subtotal);
+      lucide.createIcons();
+    }
+
+    function updateCartItemQty(index, delta) {
+      playAudioTone('tap');
+      if (APP_STATE.cart[index]) {
+        APP_STATE.cart[index].qty += delta;
+        if (APP_STATE.cart[index].qty <= 0) {
+          APP_STATE.cart.splice(index, 1);
+        }
+      }
+      renderCart();
+    }
+
+    function removeCartItem(index) {
+      playAudioTone('tap');
+      APP_STATE.cart.splice(index, 1);
+      renderCart();
+    }
+
+    function clearCurrentCart() {
+      if (APP_STATE.cart.length === 0) return;
+      playAudioTone('tap');
+      APP_STATE.cart = [];
+      renderCart();
+      showToast('Keranjang pesanan dikosongkan');
+    }
+
+    function updateCartTotals(subtotal) {
+      const tax = subtotal * 0.10;
+      const grandTotal = subtotal + tax;
+
+      document.getElementById('txtSubtotal').textContent = formatRp(subtotal);
+      document.getElementById('txtTax').textContent = formatRp(tax);
+      document.getElementById('txtGrandTotal').textContent = formatRp(grandTotal);
+
+      const isCartEmpty = APP_STATE.cart.length === 0;
+      const isPrepaid = APP_STATE.workflowMode === 'prepaid';
+      const actionContainer = document.getElementById('cartActionContainer');
+
+      if (actionContainer) {
+        if (isPrepaid) {
+          // MODE: BAYAR DULU (PREPAID)
+          actionContainer.innerHTML = `
+            <div class="space-y-1.5">
+              <button onclick="openPaymentModal()" ${isCartEmpty ? 'disabled' : ''} class="w-full py-3 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-95">
+                <i data-lucide="badge-check" class="w-4 h-4"></i>
+                <span>Bayar Sekarang & Proses Dapur</span>
+              </button>
+              <button onclick="sendOrderToKitchen(true)" ${isCartEmpty ? 'disabled' : ''} class="w-full py-2 px-3 rounded-xl bg-slate-200 hover:bg-slate-300 disabled:opacity-40 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                <span>Kirim Dapur Dulu (Bayar Nanti Jika Darurat)</span>
+              </button>
+            </div>
+          `;
+        } else {
+          // MODE: MAKAN DULU BARU BAYAR (POSTPAID)
+          actionContainer.innerHTML = `
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="sendOrderToKitchen(false)" ${isCartEmpty ? 'disabled' : ''} class="py-3 px-2 rounded-2xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-500 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95">
+                <i data-lucide="chef-hat" class="w-4 h-4"></i> Kirim ke Dapur
+              </button>
+              <button onclick="openPaymentModal()" ${isCartEmpty ? 'disabled' : ''} class="py-3 px-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95">
+                <i data-lucide="credit-card" class="w-4 h-4"></i> Bayar Kasir
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    // --- ALUR: KIRIM KE DAPUR ---
+    function sendOrderToKitchen(forcePostpaid = false) {
+      if (APP_STATE.cart.length === 0) return;
+      playAudioTone('success');
+
+      const table = APP_STATE.tables.find(t => t.id === APP_STATE.activeTableId);
+      if (!table) return;
+
+      table.status = 'dimasak';
+      table.isPaid = false;
+      table.order = {
+        orderId: table.order?.orderId || ('ORD-' + Math.floor(100 + Math.random() * 900)),
+        items: JSON.parse(JSON.stringify(APP_STATE.cart)),
+        createdAt: table.order?.createdAt || Date.now(),
+        isPaid: false,
+        workflow: forcePostpaid ? 'postpaid' : APP_STATE.workflowMode
+      };
+
+      saveStateToStorage();
+      showToast(`Pesanan ${getTableDisplayName(table)} dikirim ke Dapur (KDS)!`, 'success');
+      updateBadgeCounts();
+      backToFloorPlan();
+    }
+
+    // --- SCREEN 2: KDS (KITCHEN DISPLAY SYSTEM) ---
+    function filterKds(status) {
+      playAudioTone('tap');
+      APP_STATE.kdsFilter = status;
+
+      const buttons = {
+        all: document.getElementById('kds-filter-all'),
+        pending: document.getElementById('kds-filter-pending'),
+        cooking: document.getElementById('kds-filter-cooking'),
+      };
+
+      Object.values(buttons).forEach(btn => {
+        if (!btn) return;
+        btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white";
+      });
+
+      if (buttons[status]) {
+        buttons[status].className = "px-3 py-1.5 rounded-lg font-bold bg-amber-500 text-slate-900";
+      }
+
+      renderKDSTickets();
+    }
+
+    function renderKDSTickets() {
+      const container = document.getElementById('kdsTicketsGrid');
+      container.innerHTML = '';
+
+      let activeTickets = APP_STATE.tables.filter(t => t.order && t.order.items && (t.status === 'dimasak' || t.status === 'siap'));
+
+      if (APP_STATE.kdsFilter === 'pending') {
+        activeTickets = activeTickets.filter(t => t.status === 'dimasak');
+      } else if (APP_STATE.kdsFilter === 'cooking') {
+        activeTickets = activeTickets.filter(t => t.status === 'dimasak' && t.order.items.some(i => i.done));
+      }
+
+      if (activeTickets.length === 0) {
+        container.innerHTML = `
+          <div class="w-full h-80 flex flex-col items-center justify-center text-slate-500">
+            <i data-lucide="coffee" class="w-12 h-12 stroke-1 mb-2 text-slate-600"></i>
+            <p class="font-extrabold text-base text-slate-300">Semua Tiket Masak Bersih</p>
+            <p class="text-xs text-slate-500">Belum ada antrean baru di dapur saat ini.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      activeTickets.forEach(ticket => {
+        const timeElapsedMin = Math.max(1, Math.floor((Date.now() - ticket.order.createdAt) / 60000));
+        const isReady = ticket.status === 'siap';
+        const isPaid = ticket.isPaid || ticket.order?.isPaid;
+        const displayName = getTableDisplayName(ticket);
+
+        const card = document.createElement('div');
+        card.className = `w-80 shrink-0 bg-slate-800 rounded-3xl border ${isReady ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' : 'border-slate-700'} overflow-hidden flex flex-col`;
+
+        card.innerHTML = `
+          <div class="p-3.5 ${isReady ? 'bg-emerald-600 text-white' : 'bg-slate-750 border-b border-slate-700 text-white'} flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-1.5 mb-0.5">
+                <span class="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 ${isReady ? '!text-emerald-100' : ''}">
+                  #${ticket.order.orderId}
+                </span>
+                ${isPaid ? `
+                  <span class="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-md uppercase tracking-tight">LUNAS</span>
+                ` : `
+                  <span class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase tracking-tight">BELUM BAYAR</span>
+                `}
+              </div>
+              <h3 class="font-black text-base line-clamp-1">${displayName}</h3>
+            </div>
+            <div class="text-right">
+              <span class="text-[11px] font-mono bg-slate-900/60 px-2 py-0.5 rounded-full text-slate-300 flex items-center gap-1">
+                <i data-lucide="clock" class="w-3 h-3 text-amber-400"></i> ${timeElapsedMin} mnt lalu
+              </span>
+              <span class="text-[10px] text-slate-400 capitalize block mt-0.5">${ticket.area}</span>
+            </div>
+          </div>
+
+          <!-- Item list with interactive checklist -->
+          <div class="p-4 space-y-2.5 flex-1 overflow-y-auto max-h-72 divide-y divide-slate-700/60">
+            ${ticket.order.items.map((it, itemIdx) => `
+              <div onclick="toggleKdsItemCheck(${ticket.id}, ${itemIdx})" class="pt-2.5 first:pt-0 flex items-start gap-2.5 cursor-pointer hover:bg-slate-700/30 p-1 rounded-xl transition">
+                <input type="checkbox" ${it.done ? 'checked' : ''} onclick="event.stopPropagation(); toggleKdsItemCheck(${ticket.id}, ${itemIdx})" class="mt-1 w-4 h-4 rounded text-emerald-500 bg-slate-700 border-slate-600 focus:ring-0">
+                <div class="flex-1 ${it.done ? 'line-through opacity-50' : ''}">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-black text-amber-400">${it.qty}x</span>
+                    <span class="font-bold text-white text-xs">${it.name}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 font-medium">Varian: ${it.variant}</div>
+                  ${it.notes ? `<div class="text-[10px] text-amber-300 italic">"${it.notes}"</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="p-3 bg-slate-850 border-t border-slate-700">
+            ${isReady ? `
+              <div class="py-2.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs text-center rounded-2xl flex items-center justify-center gap-1.5">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i> Siap Diantar Pramusaji
+              </div>
+            ` : `
+              <button onclick="markOrderReadyFromKds(${ticket.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-md transition">
+                <i data-lucide="bell" class="w-4 h-4"></i> Selesaikan / Makanan Siap Saji!
+              </button>
+            `}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function toggleKdsItemCheck(tableId, itemIdx) {
+      playAudioTone('tap');
+      const table = APP_STATE.tables.find(t => t.id === tableId);
+      if (table && table.order && table.order.items[itemIdx]) {
+        table.order.items[itemIdx].done = !table.order.items[itemIdx].done;
+        saveStateToStorage();
+        renderKDSTickets();
+      }
+    }
+
+    function markOrderReadyFromKds(tableId) {
+      playAudioTone('bell');
+      const table = APP_STATE.tables.find(t => t.id === tableId);
+      if (!table) return;
+
+      table.status = 'siap';
+      if (table.order && table.order.items) {
+        table.order.items.forEach(i => i.done = true);
+      }
+      saveStateToStorage();
+
+      showToast(`🔔 Makanan untuk ${getTableDisplayName(table)} SIAP SAJI! Notifikasi dikirim.`, 'success');
+      updateBadgeCounts();
+      renderKDSTickets();
+    }
+
+    // --- SCREEN 3: WAITER / SIAP SAJI ---
+    function renderWaiterScreen() {
+      const container = document.getElementById('waiterReadyList');
+      container.innerHTML = '';
+
+      const readyTables = APP_STATE.tables.filter(t => t.status === 'siap' && t.order);
+
+      if (readyTables.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
+            <i data-lucide="concierge-bell" class="w-12 h-12 stroke-1 mx-auto mb-2 text-slate-300"></i>
+            <p class="font-extrabold text-base text-slate-700">Belum Ada Makanan Siap Antar</p>
+            <p class="text-xs text-slate-400">Pesanan yang selesai dimasak di dapur akan muncul otomatis di sini.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      readyTables.forEach(t => {
+        const isPaid = t.isPaid || t.order?.isPaid;
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-3xl border-2 border-emerald-400 shadow-md shadow-emerald-500/10 flex flex-col justify-between";
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    SELESAI DIMASAK
+                  </span>
+                  ${isPaid ? `
+                    <span class="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                      LUNAS (Bayar Dulu)
+                    </span>
+                  ` : `
+                    <span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                      Makan Dulu (Belum Bayar)
+                    </span>
+                  `}
+                </div>
+                <h3 class="text-xl font-black text-slate-900 mt-1">${getTableDisplayName(t)}</h3>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg animate-bounce">
+                🔔
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-500 font-medium mb-3">Area: <span class="capitalize font-bold text-slate-700">${t.area}</span> • Tiket: #${t.order.orderId}</p>
+
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 space-y-1.5 text-xs text-slate-700 mb-4">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Menu yang harus diantar:</span>
+              ${t.order.items.map(it => `
+                <div class="flex justify-between items-center font-semibold">
+                  <span>${it.qty}x ${it.name} (${it.variant})</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <button onclick="markOrderServedByWaiter(${t.id})" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-md transition active:scale-95">
+            <i data-lucide="${isPaid ? 'check-check' : 'check'}" class="w-4 h-4"></i>
+            <span>${isPaid ? 'Tandai Disajikan & Lepas Meja (Lunas)' : 'Tandai Sudah Disajikan (Tunggu Bayar)'}</span>
+          </button>
+        `;
+
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function markOrderServedByWaiter(tableId) {
+      playAudioTone('success');
+      const table = APP_STATE.tables.find(t => t.id === tableId);
+      if (!table) return;
+
+      const isPaid = table.isPaid || table.order?.isPaid;
+
+      if (isPaid) {
+        // Alur Bayar Dulu: Karena pesanan sudah dibayar di kasir sebelumnya, meja selesai & langsung kosong kembali
+        if (table.mergedWith && table.mergedWith.length > 0) {
+          table.mergedWith.forEach(childId => {
+            const child = APP_STATE.tables.find(t => t.id === childId);
+            if (child) {
+              child.status = 'kosong';
+              child.parentTableId = null;
+              child.order = null;
+              child.isPaid = false;
+            }
+          });
+          table.mergedWith = [];
+        }
+        table.status = 'kosong';
+        table.order = null;
+        table.isPaid = false;
+        saveStateToStorage();
+
+        showToast(`Makanan disajikan ke ${getTableDisplayName(table)}. Meja selesai & kembali kosong (Lunas)!`, 'success');
+      } else {
+        // Alur Makan Dulu: Menunggu tamu selesai makan dan bayar di kasir
+        table.status = 'bayar';
+        saveStateToStorage();
+        showToast(`Makanan ${getTableDisplayName(table)} telah disajikan. Meja berstatus Menunggu Bayar.`, 'info');
+      }
+
+      updateBadgeCounts();
+      renderWaiterScreen();
+      renderFloorPlan();
+    }
+
+    // --- CHECKOUT & PEMBAYARAN KASIR ---
+    function openPaymentModal() {
+      if (APP_STATE.cart.length === 0) return;
+      playAudioTone('tap');
+
+      const table = APP_STATE.tables.find(t => t.id === APP_STATE.activeTableId);
+      const subtotal = APP_STATE.cart.reduce((s, it) => s + (it.price * it.qty), 0);
+      const grandTotal = subtotal + (subtotal * 0.1);
+
+      document.getElementById('payModalTableNum').textContent = table ? `#${getTableDisplayName(table)}` : '#01';
+      document.getElementById('payModalAmount').textContent = formatRp(grandTotal);
+
+      selectPayMethod('cash');
+      setCashAmount('pas');
+
+      document.getElementById('paymentModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModal').classList.add('hidden');
+    }
+
+    function selectPayMethod(method) {
+      playAudioTone('tap');
+      APP_STATE.activePaymentMethod = method;
+
+      document.querySelectorAll('.pay-method-tab').forEach(b => {
+        b.className = "pay-method-tab py-2.5 px-2 rounded-xl text-xs font-bold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 flex flex-col items-center gap-1 transition";
+      });
+      const activeTab = document.getElementById(`payTab-${method}`);
+      if (activeTab) {
+        activeTab.className = "pay-method-tab py-2.5 px-2 rounded-xl text-xs font-bold border-2 border-brand-500 bg-brand-50 text-brand-700 flex flex-col items-center gap-1 transition";
+      }
+
+      document.getElementById('payContent-cash').classList.add('hidden');
+      document.getElementById('payContent-qris').classList.add('hidden');
+      document.getElementById('payContent-edc').classList.add('hidden');
+
+      if (method === 'cash') document.getElementById('payContent-cash').classList.remove('hidden');
+      else if (method === 'qris') document.getElementById('payContent-qris').classList.remove('hidden');
+      else if (method === 'edc') document.getElementById('payContent-edc').classList.remove('hidden');
+    }
+
+    function setCashAmount(val) {
+      playAudioTone('tap');
+      const subtotal = APP_STATE.cart.reduce((s, it) => s + (it.price * it.qty), 0);
+      const grandTotal = subtotal + (subtotal * 0.1);
+
+      const input = document.getElementById('cashReceivedInput');
+      if (val === 'pas') {
+        input.value = grandTotal;
+      } else {
+        input.value = val;
+      }
+      calculateCashChange();
+    }
+
+    function calculateCashChange() {
+      const subtotal = APP_STATE.cart.reduce((s, it) => s + (it.price * it.qty), 0);
+      const grandTotal = subtotal + (subtotal * 0.1);
+      const received = Number(document.getElementById('cashReceivedInput').value || 0);
+
+      const change = received - grandTotal;
+      const changeEl = document.getElementById('cashChangeDisplay');
+
+      if (change < 0) {
+        changeEl.textContent = 'Kurang ' + formatRp(Math.abs(change));
+        changeEl.className = 'font-black text-sm text-rose-500';
+      } else {
+        changeEl.textContent = formatRp(change);
+        changeEl.className = 'font-black text-sm text-emerald-600';
+      }
+    }
+
+    function simulateQrisSuccess() {
+      playAudioTone('success');
+      showToast('QRIS Terverifikasi Berhasil dari Bank Pelanggan!', 'success');
+      processFinalPayment();
+    }
+
+    function processFinalPayment() {
+      const subtotal = APP_STATE.cart.reduce((s, it) => s + (it.price * it.qty), 0);
+      const grandTotal = subtotal + (subtotal * 0.1);
+      const method = APP_STATE.activePaymentMethod;
+
+      let cashReceived = grandTotal;
+      let cashChange = 0;
+
+      if (method === 'cash') {
+        cashReceived = Number(document.getElementById('cashReceivedInput').value || 0);
+        if (cashReceived < grandTotal) {
+          showToast('Uang tunai yang diterima masih kurang!', 'error');
+          return;
+        }
+        cashChange = cashReceived - grandTotal;
+      }
+
+      playAudioTone('success');
+
+      const table = APP_STATE.tables.find(t => t.id === APP_STATE.activeTableId);
+      const displayName = getTableDisplayName(table);
+      const isPrepaidFlow = APP_STATE.workflowMode === 'prepaid';
+
+      APP_STATE.lastCompletedOrder = {
+        receiptNo: 'NB-' + Math.floor(1000 + Math.random() * 9000),
+        table: displayName,
+        dateTime: new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        items: JSON.parse(JSON.stringify(APP_STATE.cart)),
+        subtotal: subtotal,
+        tax: grandTotal - subtotal,
+        total: grandTotal,
+        method: method === 'cash' ? 'Tunai (Cash)' : (method === 'qris' ? 'QRIS Standar' : 'Kartu Debit EDC'),
+        paid: cashReceived,
+        change: cashChange,
+        workflow: isPrepaidFlow ? 'Bayar Dulu (Prepaid)' : 'Makan Dulu (Postpaid)'
+      };
+
+      if (isPrepaidFlow) {
+        // PADA ALUR BAYAR DULU:
+        // Pembayaran dilakukan SEBELUM dimasak.
+        // Maka status meja berubah menjadi 'dimasak', ditandai LUNAS, dan tiket langsung dikirim ke KDS.
+        if (table) {
+          table.status = 'dimasak';
+          table.isPaid = true;
+          table.order = {
+            orderId: table.order?.orderId || ('ORD-' + Math.floor(100 + Math.random() * 900)),
+            items: JSON.parse(JSON.stringify(APP_STATE.cart)),
+            createdAt: Date.now(),
+            isPaid: true,
+            workflow: 'prepaid'
+          };
+        }
+        APP_STATE.cart = [];
+        saveStateToStorage();
+        closePaymentModal();
+        showReceiptModal();
+        updateBadgeCounts();
+        showToast('Pembayaran lunas! Pesanan langsung diteruskan ke Dapur (KDS).', 'success');
+      } else {
+        // PADA ALUR MAKAN DULU:
+        // Pembayaran dilakukan SETELAH makan. Meja selesai dan di-reset menjadi kosong.
+        if (table) {
+          if (table.mergedWith && table.mergedWith.length > 0) {
+            table.mergedWith.forEach(childId => {
+              const child = APP_STATE.tables.find(t => t.id === childId);
+              if (child) {
+                child.status = 'kosong';
+                child.parentTableId = null;
+                child.order = null;
+                child.isPaid = false;
+              }
+            });
+            table.mergedWith = [];
+          }
+          table.status = 'kosong';
+          table.order = null;
+          table.isPaid = false;
+        }
+        APP_STATE.cart = [];
+        saveStateToStorage();
+        closePaymentModal();
+        showReceiptModal();
+        updateBadgeCounts();
+        showToast('Transaksi selesai! Meja kembali kosong.', 'success');
+      }
+    }
+
+    // --- STRUK (RECEIPT) ---
+    function showReceiptModal() {
+      const data = APP_STATE.lastCompletedOrder;
+      if (!data) return;
+
+      document.getElementById('recReceiptNo').textContent = data.receiptNo;
+      document.getElementById('recDateTime').textContent = data.dateTime;
+      document.getElementById('recTableNum').textContent = data.table;
+      document.getElementById('recSubtotal').textContent = formatRp(data.subtotal);
+      document.getElementById('recTax').textContent = formatRp(data.tax);
+      document.getElementById('recTotal').textContent = formatRp(data.total);
+      document.getElementById('recMethod').textContent = data.method;
+      document.getElementById('recWorkflowStatus').textContent = `LUNAS (${data.workflow || 'Berhasil'})`;
+
+      if (data.method.includes('Tunai')) {
+        document.getElementById('recCashRow').classList.remove('hidden');
+        document.getElementById('recChangeRow').classList.remove('hidden');
+        document.getElementById('recCashPaid').textContent = formatRp(data.paid);
+        document.getElementById('recChange').textContent = formatRp(data.change);
+      } else {
+        document.getElementById('recCashRow').classList.add('hidden');
+        document.getElementById('recChangeRow').classList.add('hidden');
+      }
+
+      const itemsContainer = document.getElementById('recItemsList');
+      itemsContainer.innerHTML = '';
+
+      data.items.forEach(it => {
+        const itemRow = document.createElement('div');
+        itemRow.className = "flex justify-between";
+        itemRow.innerHTML = `
+          <span>${it.qty}x ${it.name}</span>
+          <span>${formatRp(it.price * it.qty)}</span>
+        `;
+        itemsContainer.appendChild(itemRow);
+      });
+
+      document.getElementById('receiptModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function printMockReceipt() {
+      playAudioTone('tap');
+      showToast('Struk dikirim ke printer thermal...');
+      setTimeout(() => {
+        showToast('Cetak struk berhasil!', 'success');
+      }, 800);
+    }
+
+    function closeReceiptAndFinish() {
+      playAudioTone('tap');
+      document.getElementById('receiptModal').classList.add('hidden');
+      backToFloorPlan();
+    }
+
+    // --- BADGES COUNTER ---
+    function updateBadgeCounts() {
+      const kdsCount = APP_STATE.tables.filter(t => t.status === 'dimasak' && t.order).length;
+      const waiterCount = APP_STATE.tables.filter(t => t.status === 'siap' && t.order).length;
+
+      const badgeKds = document.getElementById('badgeKdsCount');
+      if (badgeKds) {
+        if (kdsCount > 0) {
+          badgeKds.textContent = kdsCount;
+          badgeKds.classList.remove('hidden');
+        } else {
+          badgeKds.classList.add('hidden');
+        }
+      }
+
+      const badgeWaiter = document.getElementById('badgeWaiterCount');
+      if (badgeWaiter) {
+        if (waiterCount > 0) {
+          badgeWaiter.textContent = waiterCount;
+          badgeWaiter.classList.remove('hidden');
+        } else {
+          badgeWaiter.classList.add('hidden');
+        }
+      }
+    }
+
+    // --- TOAST NOTIFICATION UTILITY ---
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+
+      let bg = 'bg-slate-900 text-white';
+      if (type === 'success') bg = 'bg-emerald-600 text-white';
+      if (type === 'error') bg = 'bg-rose-600 text-white';
+
+      toast.className = `${bg} px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xl flex items-center gap-2 transform transition-all duration-300 translate-y-3 opacity-0 pointer-events-auto`;
+      toast.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle' : 'info'}" class="w-4 h-4"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-3', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-4');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // --- QUICK INFO MODAL ---
+    function showQuickInfoModal() {
+      playAudioTone('tap');
+      document.getElementById('quickInfoModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function hideQuickInfoModal() {
+      document.getElementById('quickInfoModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
